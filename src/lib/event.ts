@@ -1,23 +1,33 @@
-export class Event {
-  UI: any;
+import { EventEmitter } from 'events';
+import { Trading } from './trading';
+import * as types from './type';
+import { logger, Helper } from './common';
 
-  constructor(ctrl: any) {
-    this.UI = ctrl.UI;
+/**
+ * 通用事件处理器
+ */
+export class Event extends EventEmitter {
+  trading: Trading;
+
+  constructor() {
+    super();
+    this.trading = new Trading();
+    this.on('placeOrder', this.onPlaceOrder);
+    this.on('updateArbitage', this.onUpdateArbitage);
   }
 
-  // 通用事件处理器
-  // 目前尚未使用
-  wsEvent(event: any) {
-    if (event.eventType) {
-      var type = event.eventType;
-      if (type == 'depthUpdate') {
-        //
-      } else if (type == 'aggTrade') {
-        // moduleObj.UI.addTrade(event.eventTime, event.symbol, event.tradeId, event.price, event.quantity);
-        // console.log("handle.wsEvent().aggTrade(): ", event);
-      } else {
-        //console.log("handle.wsEvent(): ", event);
-      }
+  async onPlaceOrder(exchange: types.IExchange, triangle: types.ITriangle) {
+    const timer = Helper.getTimer();
+    logger.debug('执行订单事件[开始]');
+    logger.info('执行订单');
+    await this.trading.placeOrder(exchange, triangle);
+    // await this.trading.testOrder(exchange, triangle);
+    logger.debug(`执行订单事件[终了] ${Helper.endTimer(timer)}`);
+  }
+
+  async onUpdateArbitage(ranks: types.IRank[]) {
+    if (ranks.length > 0) {
+      await this.trading.storage.rank.putRanks(ranks);
     }
   }
 }
